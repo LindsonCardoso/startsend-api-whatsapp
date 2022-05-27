@@ -1,4 +1,4 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia, Buttons, List } = require('whatsapp-web.js');
 const express = require('express');
 const socketIO = require('socket.io');
 const qrcode = require('qrcode');
@@ -121,9 +121,8 @@ const createSession = function(id, description) {
 
   io.emit('ready', { id: id });
   io.emit('message', { id: id, text: 'Whatsapp está pronto!' });
-  
-  console.log(JSON.stringify(id) + ' READY' +'\n' );
 
+  console.log(JSON.stringify(id) + ' READY' +'\n' );
   const savedSessions = getSessionsFile();
   const sessionIndex = savedSessions.findIndex(sess => sess.id == id);
   savedSessions[sessionIndex].ready = true;
@@ -136,7 +135,7 @@ const createSession = function(id, description) {
   io.emit('authenticated', { id: id });
   io.emit('message', { id: id, text: 'Whatsapp esta autenticado!'});
   console.log('\n' +  JSON.stringify(id) + ' AUTHENTICATED');
-  
+
   });
 
   client.on('auth_failure', function() {
@@ -146,7 +145,7 @@ const createSession = function(id, description) {
 
   client.on('disconnected', () => {
     io.emit('message', { id: id, text: 'Whatsapp is disconnected!' });
-  
+
     client.destroy();
 
     //variavel para comparar com sender 
@@ -179,6 +178,21 @@ const createSession = function(id, description) {
   //--- Retirar do Whatsapp-session.json
     io.emit('remove-session', id);
   });
+
+ client.on('message', async msg => {
+  console.log('MESSAGE RECEIVED', msg);
+
+  if (msg.body === '!buttons') {
+    let button = new Buttons('Button body',[{body:'bt1'},{body:'bt2'},{body:'bt3'}],'title','footer');
+    client.sendMessage(msg.from, button);
+  }  else if (msg.body === '!list') {
+    let sections = [{title:'sectionTitle',rows:[{title:'ListItem1', description: 'desc'},{title:'ListItem2'}]}];
+    let list = new List('List body','btnText',sections,'Title','footer');
+    client.sendMessage(msg.from, list);
+  }
+ 
+  })
+
 
   // Tambahkan client ke sessions
   sessions.push({
@@ -228,6 +242,33 @@ io.on('connection', function(socket) {
     createSession(data.id, data.description);
   });
 });
+
+
+
+
+
+
+
+
+
+/**
+ * conextion
+ * 
+ * **/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -391,11 +432,6 @@ client.getState(number).then( async function(result){
   });
 });
 });
-
-
-
-
-
 
 
 /*---- POST's ---------------------------------------------------------------------------------------------------------*/
@@ -592,11 +628,6 @@ if(nameId == sender){
 }
 */
 });
-
-
-
-
-
 
 
 /*Escutando porta*/
