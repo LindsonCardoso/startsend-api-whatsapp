@@ -1,4 +1,6 @@
 const { Client, LocalAuth, MessageMedia, Buttons, List } = require('whatsapp-web.js');
+const { Worker, isMainThread, workerData} = require('worker_threads');
+const mysql = require("../lib/bd").pool;
 const express = require('express');
 const socketIO = require('socket.io');
 const qrcode = require('qrcode');
@@ -7,8 +9,8 @@ const fs = require('fs');
 
 const fileUpload = require('express-fileupload');
 const { phoneNumberFormatter } = require('../helpers/formatter');
-//const axios = require('axios');
-const port = process.env.PORT || 8000;
+const { send } = require('process');
+const port = process.env.PORT || 4000;
 
 const app = express();
 const server = http.createServer(app);
@@ -18,7 +20,6 @@ app.use(express.json());
 app.use(express.urlencoded({
   extended: true
 }));
-
 
 app.use(fileUpload({
   debug: false
@@ -55,7 +56,9 @@ app.get('/multi', (req, res) => {
 **/
 
 const sessions = [];
+
 const SESSIONS_FILE = './whatsapp-sessions.json';
+
 
 const createSessionsFileIfNotExists = function() {
   if (!fs.existsSync(SESSIONS_FILE)) {
@@ -255,24 +258,6 @@ io.on('connection', function(socket) {
  * conextion
  * 
  * **/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
 * Rotas
 * status 
@@ -433,13 +418,13 @@ client.getState(number).then( async function(result){
 });
 });
 
-
 /*---- POST's ---------------------------------------------------------------------------------------------------------*/
 
 app.post('/send-message', async (req, res) => {
   const sender = req.body.sender;
   const number = phoneNumberFormatter(req.body.number);
   const message = req.body.message;
+
   console.log(sender, number, message);
   
   const client = sessions.find(sess => sess.id == sender)?.client;
@@ -450,8 +435,10 @@ app.post('/send-message', async (req, res) => {
       message: `The sender: ${sender} is not found!` 
     })
   }
- 
+
+
   const isRegisteredNumber = await client.isRegisteredUser(number);
+  
   if(!isRegisteredNumber) {
    return res.status(422).json({
      status: false,
